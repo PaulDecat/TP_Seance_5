@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import CSV</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Importer un fichier CSV</h1>
+
+    <form id="upload-form">
+      <input id="file-input" type="file" name="file" accept=".csv,text/csv" required />
+      <button id="submit-btn" type="submit">Uploader</button>
+    </form>
+
+    <p id="message" class="message"></p>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
