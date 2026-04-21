@@ -12,13 +12,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Stockage temporaire (simple projet)
+
 df_global = None
 
 
-# Upload CSV (déjà utilisé)
+# 📥 Upload CSV
 @app.post("/upload")
-async def upload_file(file):
+async def upload_file(file: UploadFile = File(...)):
     global df_global
 
     df_global = pd.read_csv(file.file)
@@ -29,16 +29,28 @@ async def upload_file(file):
     }
 
 
-# 👉 KPI CA TOTAL
+
+# 👇 KPI 1 : CA total (déjà fait ou optionnel)
 @app.get("/kpi/revenue")
-def get_revenue():
+def revenue():
     global df_global
 
     if df_global is None:
-        return {"error": "Aucune donnée chargée"}
-
-    total_ca = df_global["chiffre_affaires"].sum()
+        return {"error": "Aucune donnée"}
 
     return {
-        "total_revenue": float(total_ca)
+        "total_revenue": float(df_global["chiffre_affaires"].sum())
+    }
+
+
+# 👇 KPI 2 : nombre total de clients
+@app.get("/kpi/clients")
+def total_clients():
+    global df_global
+
+    if df_global is None:
+        return {"error": "Aucune donnée"}
+
+    return {
+        "total_clients": int(df_global["client_id"].nunique())
     }

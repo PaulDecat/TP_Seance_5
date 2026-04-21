@@ -25,3 +25,16 @@ async function loadKPI() {
     display.textContent = "CA total : " + data.total_revenue + " €";
   }
 }
+
+async function loadClients() {
+  const res = await fetch("http://localhost:8000/kpi/clients");
+  const data = await res.json();
+
+  const display = document.getElementById("clients");
+
+  if (data.error) {
+    display.textContent = data.error;
+  } else {
+    display.textContent = "Total clients : " + data.total_clients;
+  }
+}
