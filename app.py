@@ -48,6 +48,24 @@ RISK_THRESHOLDS = {
     "satisfaction_score_max": 2,
 }
 
+RECOMMENDATIONS = [
+    {
+        "id": "rec-contact-retard",
+        "title": "Relancer les clients en retard de paiement",
+        "description": "Mettre en place une relance proactive pour les clients depassant le seuil de retard.",
+    },
+    {
+        "id": "rec-suivi-satisfaction",
+        "title": "Lancer un suivi satisfaction cible",
+        "description": "Contacter les clients avec un score de satisfaction faible pour identifier les irritants.",
+    },
+    {
+        "id": "rec-plan-retention",
+        "title": "Construire un plan de retention",
+        "description": "Prioriser les clients en risque de churn avec une offre ou un accompagnement dedie.",
+    },
+]
+
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_error):
@@ -70,6 +88,17 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 source_file TEXT NOT NULL,
                 row_data TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recommendation_id TEXT NOT NULL,
+                recommendation_title TEXT NOT NULL,
+                action_title TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
@@ -182,6 +211,80 @@ def risk_clients():
                 "satisfaction_score": f"<= {RISK_THRESHOLDS['satisfaction_score_max']}",
             },
         }
+    )
+
+
+@app.get("/api/recommendations")
+def get_recommendations():
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        rows = connection.execute(
+            """
+            SELECT id, recommendation_id, recommendation_title, action_title, created_at
+            FROM actions
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+    actions = [
+        {
+            "id": row[0],
+            "recommendation_id": row[1],
+            "recommendation_title": row[2],
+            "action_title": row[3],
+            "created_at": row[4],
+        }
+        for row in rows
+    ]
+    return jsonify({"ok": True, "recommendations": RECOMMENDATIONS, "actions": actions})
+
+
+@app.post("/api/actions")
+def create_action():
+    payload = request.get_json(silent=True) or {}
+    recommendation_id = str(payload.get("recommendation_id", "")).strip()
+    action_title = str(payload.get("action_title", "")).strip()
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "message": "La recommandation est obligatoire."}), 400
+
+    if not action_title:
+        return jsonify({"ok": False, "message": "Le titre de l'action est obligatoire."}), 400
+
+    recommendation = next(
+        (item for item in RECOMMENDATIONS if item["id"] == recommendation_id),
+        None,
+    )
+    if recommendation is None:
+        return jsonify({"ok": False, "message": "Recommandation introuvable."}), 404
+
+    try:
+        with sqlite3.connect(DATABASE_PATH) as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO actions (recommendation_id, recommendation_title, action_title)
+                VALUES (?, ?, ?)
+                """,
+                (recommendation_id, recommendation["title"], action_title),
+            )
+            connection.commit()
+            action_id = cursor.lastrowid
+    except sqlite3.DatabaseError:
+        return jsonify({"ok": False, "message": "Erreur base de donnees lors du stockage."}), 500
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "message": "Action creee et sauvegardee avec succes.",
+                "action": {
+                    "id": action_id,
+                    "recommendation_id": recommendation_id,
+                    "recommendation_title": recommendation["title"],
+                    "action_title": action_title,
+                },
+            }
+        ),
+        201,
     )
 
 
