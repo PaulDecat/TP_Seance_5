@@ -51,6 +51,7 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+
 def extract_segment(row: dict) -> str:
     for key, value in row.items():
         if key is None:
@@ -190,7 +191,6 @@ def get_segments_distribution():
         ),
         200,
     )
-
 
 if __name__ == "__main__":
     init_db()

@@ -7,11 +7,13 @@ const chartCanvas = document.getElementById("segment-chart");
 const refreshChartButton = document.getElementById("refresh-chart-btn");
 const chartContext = chartCanvas.getContext("2d");
 
+
 function showMessage(text, isSuccess) {
   message.textContent = text;
   message.classList.remove("success", "error");
   message.classList.add(isSuccess ? "success" : "error");
 }
+
 
 function setChartMessage(text) {
   chartMessage.textContent = text;
@@ -86,7 +88,6 @@ async function loadSegmentChart() {
     refreshChartButton.disabled = false;
   }
 }
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -132,7 +133,8 @@ form.addEventListener("submit", async (event) => {
     showMessage(payload.message, Boolean(payload.ok));
     if (payload.ok) {
       form.reset();
-      await loadSegmentChart();
+
+      await loadSegmentChart();ain
     }
   } catch (error) {
     showMessage("Erreur reseau pendant l'upload.", false);
@@ -145,4 +147,4 @@ refreshChartButton.addEventListener("click", () => {
   loadSegmentChart();
 });
 
-loadSegmentChart();
+loadSegmentChart();ain
