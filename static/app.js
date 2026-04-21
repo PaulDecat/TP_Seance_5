@@ -2,11 +2,29 @@ const form = document.getElementById("upload-form");
 const input = document.getElementById("file-input");
 const button = document.getElementById("submit-btn");
 const message = document.getElementById("message");
+const riskCount = document.getElementById("risk-count");
+const totalCount = document.getElementById("total-count");
 
 function showMessage(text, isSuccess) {
   message.textContent = text;
   message.classList.remove("success", "error");
   message.classList.add(isSuccess ? "success" : "error");
+}
+
+async function refreshRiskCount() {
+  try {
+    const response = await fetch("/api/risk-clients");
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error("Invalid response");
+    }
+
+    riskCount.textContent = String(payload.risk_clients);
+    totalCount.textContent = String(payload.total_clients);
+  } catch (error) {
+    riskCount.textContent = "-";
+    totalCount.textContent = "-";
+  }
 }
 
 form.addEventListener("submit", async (event) => {
@@ -54,6 +72,7 @@ form.addEventListener("submit", async (event) => {
     showMessage(payload.message, Boolean(payload.ok));
     if (payload.ok) {
       form.reset();
+      await refreshRiskCount();
     }
   } catch (error) {
     showMessage("Erreur reseau pendant l'upload.", false);
@@ -61,3 +80,5 @@ form.addEventListener("submit", async (event) => {
     button.disabled = false;
   }
 });
+
+refreshRiskCount();

@@ -20,6 +20,35 @@ app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
 
+RISK_COLUMN_ALIASES = {
+    "churn": ["churn", "is_churn", "resilie", "resiliation", "attrition"],
+    "payment_delay_days": [
+        "payment_delay_days",
+        "retard_paiement_jours",
+        "days_late",
+        "late_days",
+    ],
+    "payment_incidents": [
+        "payment_incidents",
+        "incidents_paiement",
+        "nb_incidents",
+        "late_payments",
+    ],
+    "satisfaction_score": [
+        "satisfaction_score",
+        "satisfaction",
+        "customer_satisfaction",
+        "csat",
+    ],
+}
+
+RISK_THRESHOLDS = {
+    "payment_delay_days": 30,
+    "payment_incidents": 3,
+    "satisfaction_score_max": 2,
+}
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_error):
     return (
@@ -51,9 +80,109 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def normalize_key(key: str) -> str:
+    return key.strip().lower().replace(" ", "_")
+
+
+def find_value_by_alias(row: dict, aliases: list[str]):
+    normalized_row = {normalize_key(str(key)): value for key, value in row.items()}
+    for alias in aliases:
+        if alias in normalized_row:
+            return normalized_row[alias]
+    return None
+
+
+def parse_float(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip().replace(",", ".")
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "oui"}:
+        return True
+    if text in {"0", "false", "no", "non"}:
+        return False
+    return None
+
+
+def is_risk_client(row: dict) -> bool:
+    churn_value = find_value_by_alias(row, RISK_COLUMN_ALIASES["churn"])
+    churn = parse_bool(churn_value)
+    if churn is True:
+        return True
+
+    delay_days = parse_float(find_value_by_alias(row, RISK_COLUMN_ALIASES["payment_delay_days"]))
+    if delay_days is not None and delay_days >= RISK_THRESHOLDS["payment_delay_days"]:
+        return True
+
+    incidents = parse_float(find_value_by_alias(row, RISK_COLUMN_ALIASES["payment_incidents"]))
+    if incidents is not None and incidents >= RISK_THRESHOLDS["payment_incidents"]:
+        return True
+
+    satisfaction = parse_float(find_value_by_alias(row, RISK_COLUMN_ALIASES["satisfaction_score"]))
+    if satisfaction is not None and satisfaction <= RISK_THRESHOLDS["satisfaction_score_max"]:
+        return True
+
+    return False
+
+
+def get_risk_clients_count() -> tuple[int, int]:
+    total_clients = 0
+    risk_clients = 0
+
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        rows = connection.execute("SELECT row_data FROM imported_rows").fetchall()
+
+    for (row_json,) in rows:
+        try:
+            payload = json.loads(row_json)
+        except json.JSONDecodeError:
+            continue
+
+        total_clients += 1
+        if is_risk_client(payload):
+            risk_clients += 1
+
+    return total_clients, risk_clients
+
+
 @app.get("/")
 def index():
     return render_template("index.html")
+
+
+@app.get("/api/risk-clients")
+def risk_clients():
+    total_clients, risk_clients = get_risk_clients_count()
+    return jsonify(
+        {
+            "ok": True,
+            "total_clients": total_clients,
+            "risk_clients": risk_clients,
+            "criteria": {
+                "churn": "churn = true/oui/yes/1",
+                "payment_delay_days": f">= {RISK_THRESHOLDS['payment_delay_days']} jours de retard",
+                "payment_incidents": f">= {RISK_THRESHOLDS['payment_incidents']} incidents",
+                "satisfaction_score": f"<= {RISK_THRESHOLDS['satisfaction_score_max']}",
+            },
+        }
+    )
 
 
 @app.post("/api/import")
