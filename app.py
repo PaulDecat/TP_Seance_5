@@ -109,6 +109,7 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+
 def normalize_key(key: str) -> str:
     return key.strip().lower().replace(" ", "_")
 
@@ -286,8 +287,6 @@ def create_action():
         ),
         201,
     )
-
-
 @app.post("/api/import")
 def import_csv():
     if "file" not in request.files:
