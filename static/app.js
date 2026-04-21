@@ -2,15 +2,16 @@ const form = document.getElementById("upload-form");
 const input = document.getElementById("file-input");
 const button = document.getElementById("submit-btn");
 const message = document.getElementById("message");
+
 const riskCount = document.getElementById("risk-count");
 const totalCount = document.getElementById("total-count");
+
 
 function showMessage(text, isSuccess) {
   message.textContent = text;
   message.classList.remove("success", "error");
   message.classList.add(isSuccess ? "success" : "error");
 }
-
 async function refreshRiskCount() {
   try {
     const response = await fetch("/api/risk-clients");
@@ -72,6 +73,7 @@ form.addEventListener("submit", async (event) => {
     showMessage(payload.message, Boolean(payload.ok));
     if (payload.ok) {
       form.reset();
+
       await refreshRiskCount();
     }
   } catch (error) {
