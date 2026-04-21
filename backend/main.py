@@ -1,32 +1,44 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 
 app = FastAPI()
 
+# CORS (important)
 app.add_middleware(
-    
     CORSMiddleware,
-    allow_origins=["*"],  # en dev uniquement
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Stockage temporaire (simple projet)
+df_global = None
+
+
+# Upload CSV (déjà utilisé)
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        # Lire le CSV sans validation
-        df = pd.read_csv(file.file)
+async def upload_file(file):
+    global df_global
 
-        # Retour simple
-        return {
-            "message": "Fichier lu avec succès",
-            "rows": len(df),
-            "data": df.to_dict(orient="records")
-        }
+    df_global = pd.read_csv(file.file)
 
-    except Exception as e:
-        return {
-            "error": "Impossible de lire le fichier CSV",
-            "details": str(e)
-        }
+    return {
+        "message": "Fichier chargé",
+        "rows": len(df_global)
+    }
+
+
+# 👉 KPI CA TOTAL
+@app.get("/kpi/revenue")
+def get_revenue():
+    global df_global
+
+    if df_global is None:
+        return {"error": "Aucune donnée chargée"}
+
+    total_ca = df_global["chiffre_affaires"].sum()
+
+    return {
+        "total_revenue": float(total_ca)
+    }

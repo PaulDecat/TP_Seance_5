@@ -1,36 +1,27 @@
-async function uploadFile() {
-  const fileInput = document.getElementById("fileInput");
-  const success = document.getElementById("success");
-  const error = document.getElementById("error");
-
-  success.textContent = "";
-  error.textContent = "";
-
-  const file = fileInput.files[0];
-
-  if (!file) {
-    error.textContent = "Veuillez sélectionner un fichier";
-    return;
-  }
+async function upload() {
+  const file = document.getElementById("file").files[0];
 
   const formData = new FormData();
   formData.append("file", file);
 
-  try {
-    const response = await fetch("http://localhost:8000/upload", {
-      method: "POST",
-      body: formData
-    });
+  await fetch("http://localhost:8000/upload", {
+    method: "POST",
+    body: formData
+  });
 
-    const data = await response.json();
+  alert("Fichier uploadé");
+}
 
-    if (!response.ok) {
-      error.textContent = data.detail; // message backend
-    } else {
-      success.textContent = "Fichier importé avec succès";
-    }
 
-  } catch (e) {
-    error.textContent = "Impossible de contacter le serveur";
+async function loadKPI() {
+  const res = await fetch("http://localhost:8000/kpi/revenue");
+  const data = await res.json();
+
+  const display = document.getElementById("kpi");
+
+  if (data.error) {
+    display.textContent = data.error;
+  } else {
+    display.textContent = "CA total : " + data.total_revenue + " €";
   }
 }
