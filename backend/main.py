@@ -1,15 +1,17 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 
 app = FastAPI()
 
+# CORS (important)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 df_global = None
 
@@ -25,6 +27,7 @@ async def upload_file(file: UploadFile = File(...)):
         "message": "Fichier chargé",
         "rows": len(df_global)
     }
+
 
 
 # 👇 KPI 1 : CA total (déjà fait ou optionnel)

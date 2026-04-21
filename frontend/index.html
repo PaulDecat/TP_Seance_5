@@ -1,15 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Upload CSV</title>
+  <title>KPI CA</title>
 </head>
 <body>
 
-  <h2>Importer un fichier CSV</h2>
+  <h2>Importer CSV</h2>
+  <input type="file" id="file">
+  <button onclick="upload()">Upload</button>
 
-  <input type="file" id="fileInput" accept=".csv">
-  <button onclick="uploadFile()">Importer</button>
+  <hr>
+
 
   <p id="success" style="color: green;"></p>
   <p id="error" style="color: red;"></p>
