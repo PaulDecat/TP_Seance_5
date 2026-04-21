@@ -51,6 +51,18 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+
+def extract_segment(row: dict) -> str:
+    for key, value in row.items():
+        if key is None:
+            continue
+        normalized_key = key.strip().lower()
+        if normalized_key in {"segment", "segmentation", "client_segment", "customer_segment"}:
+            segment_value = str(value).strip()
+            return segment_value if segment_value else "Non renseigne"
+    return "Non renseigne"
+
+
 @app.get("/")
 def index():
     return render_template("index.html")
@@ -121,6 +133,64 @@ def import_csv():
     except OSError:
         return jsonify({"ok": False, "message": "Erreur lors de l'enregistrement du fichier."}), 500
 
+
+@app.get("/api/segments")
+def get_segments_distribution():
+    try:
+        with sqlite3.connect(DATABASE_PATH) as connection:
+            cursor = connection.execute("SELECT row_data FROM imported_rows")
+            rows = cursor.fetchall()
+    except sqlite3.DatabaseError:
+        return jsonify({"ok": False, "message": "Erreur base de donnees lors de la lecture."}), 500
+
+    segment_counts = {}
+    invalid_rows = 0
+
+    for (raw_row,) in rows:
+        try:
+            row_data = json.loads(raw_row)
+            if not isinstance(row_data, dict):
+                invalid_rows += 1
+                continue
+        except json.JSONDecodeError:
+            invalid_rows += 1
+            continue
+
+        segment = extract_segment(row_data)
+        segment_counts[segment] = segment_counts.get(segment, 0) + 1
+
+    if not segment_counts:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "Aucune donnee segmentable disponible.",
+                    "segments": [],
+                    "total_clients": 0,
+                }
+            ),
+            200,
+        )
+
+    sorted_segments = sorted(segment_counts.items(), key=lambda item: item[1], reverse=True)
+    total_clients = sum(segment_counts.values())
+    segments = [
+        {"label": label, "count": count, "percentage": round((count / total_clients) * 100, 2)}
+        for label, count in sorted_segments
+    ]
+
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "message": "Repartition des segments calculee.",
+                "segments": segments,
+                "total_clients": total_clients,
+                "ignored_rows": invalid_rows,
+            }
+        ),
+        200,
+    )
 
 if __name__ == "__main__":
     init_db()
