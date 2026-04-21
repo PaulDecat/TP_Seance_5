@@ -10,6 +10,12 @@
   <main class="container">
     <h1>Importer un fichier CSV</h1>
 
+    <section class="risk-card" aria-live="polite">
+      <h2>Clients a risque</h2>
+      <p class="risk-value"><span id="risk-count">-</span> / <span id="total-count">-</span></p>
+      <p class="risk-caption">Le nombre se met a jour automatiquement apres chaque import.</p>
+    </section>
+
     <form id="upload-form">
       <input id="file-input" type="file" name="file" accept=".csv,text/csv" required />
       <button id="submit-btn" type="submit">Uploader</button>
